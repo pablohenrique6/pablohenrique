@@ -3,6 +3,7 @@ package br.com.texoit.pablohenrique.repository.jdbc.impl;
 import br.com.texoit.pablohenrique.exception.PabloHenriquePersistenceException;
 import br.com.texoit.pablohenrique.model.Movie;
 import br.com.texoit.pablohenrique.model.Producer;
+import br.com.texoit.pablohenrique.model.Studio;
 import br.com.texoit.pablohenrique.model.Win;
 import br.com.texoit.pablohenrique.repository.jdbc.dao.MovieDAO;
 import br.com.texoit.pablohenrique.repository.jdbc.dao.ProducerDAO;
@@ -72,19 +73,76 @@ public class ProducerDAOImpl implements ProducerDAO {
         return producers;
     }
 
+    @Override
+    public void inserir(List<Producer> producers) throws PabloHenriquePersistenceException {
+        try {
+            StringBuilder sqlProducer = new StringBuilder();
+            sqlProducer.append("INSERT INTO TEXOIT.PRODUCER ");
+            sqlProducer.append("(NAME) ");
+            sqlProducer.append("VALUES ");
+            sqlProducer.append("(?) ");
+
+            StringBuilder sqlMovieProducer = new StringBuilder();
+            sqlMovieProducer.append("INSERT INTO TEXOIT.MOVIE_PRODUCER ");
+            sqlMovieProducer.append("(ID_MOVIE, ");
+            sqlMovieProducer.append(" ID_PRODUCER) ");
+            sqlMovieProducer.append("VALUES ");
+            sqlMovieProducer.append("(?,?) ");
+
+            for (Producer producer : producers) {
+                //INSERT PRODUCER
+                KeyHolder keyHolderProducer = new GeneratedKeyHolder();
+                jdbcTemplate.update(
+                        new PreparedStatementCreator() {
+                            public PreparedStatement createPreparedStatement(Connection connection) throws SQLException {
+                                PreparedStatement ps =
+                                        connection.prepareStatement(sqlProducer.toString(), new String[]{"ID"});
+                                ps.setString(1, producer.getNome());
+
+                                return ps;
+                            }
+                        },
+                        keyHolderProducer);
+                Long idProducer = keyHolderProducer.getKey().longValue();
+
+                //INSERT MOVIEPRODUCER
+                KeyHolder keyHolderMovieProducer = new GeneratedKeyHolder();
+                jdbcTemplate.update(
+                        new PreparedStatementCreator() {
+                            public PreparedStatement createPreparedStatement(Connection connection) throws SQLException {
+                                PreparedStatement ps =
+                                        connection.prepareStatement(sqlMovieProducer.toString(), new String[]{"ID"});
+                                ps.setLong(1, producer.getIdMovie());
+                                ps.setLong(2, idProducer);
+
+                                return ps;
+                            }
+                        },
+                        keyHolderMovieProducer);
+                Long idMovieProducer = keyHolderMovieProducer.getKey().longValue();
+            }
+        } catch (Exception e) {
+            throw new PabloHenriquePersistenceException(e.getMessage());
+        }
+    }
+
 
     private List<String> producersWins() throws PabloHenriquePersistenceException {
         try {
             StringBuilder sql = new StringBuilder();
 
             sql.append("SELECT ");
-            sql.append("    PRODUCERS ");
+            sql.append("    P.NAME ");
             sql.append("FROM ");
-            sql.append("    TEXOIT.MOVIE ");
+            sql.append("    TEXOIT.MOVIE M ");
+            sql.append("    INNER JOIN TEXOIT.MOVIE_PRODUCER MS ");
+            sql.append("        ON (M.ID = MS.ID_MOVIE) ");
+            sql.append("    INNER JOIN TEXOIT.PRODUCER P ");
+            sql.append("        ON (MS.ID_PRODUCER = P.ID) ");
             sql.append("WHERE ");
-            sql.append("    WINNER = TRUE ");
+            sql.append("    M.WINNER = TRUE ");
             sql.append("GROUP BY ");
-            sql.append("    PRODUCERS HAVING COUNT(*) > 1 ");
+            sql.append("    P.NAME HAVING COUNT(*) > 1 ");
 
             List<String> producers = jdbcTemplate.queryForList(sql.toString(), String.class);
             return producers;
@@ -100,13 +158,16 @@ public class ProducerDAOImpl implements ProducerDAO {
             StringBuilder sql = new StringBuilder();
 
             sql.append("SELECT ");
-            sql.append("    YEAR ");
+            sql.append("    M.YEAR ");
             sql.append("FROM ");
-            sql.append("    TEXOIT.MOVIE ");
+            sql.append("    TEXOIT.MOVIE M ");
+            sql.append("    INNER JOIN TEXOIT.MOVIE_PRODUCER MS ");
+            sql.append("        ON (M.ID = MS.ID_MOVIE) ");
+            sql.append("    INNER JOIN TEXOIT.PRODUCER P ");
+            sql.append("        ON (MS.ID_PRODUCER = P.ID) ");
             sql.append("WHERE ");
-            sql.append("    PRODUCERS = ? ");
-            sql.append("ORDER BY ");
-            sql.append("    YEAR ASC ");
+            sql.append("    M.WINNER = TRUE ");
+            sql.append("    AND P.NAME = ? ");
 
             List<Integer> wins = jdbcTemplate.queryForList(sql.toString(), Integer.class, producer.getNome());
             return wins;

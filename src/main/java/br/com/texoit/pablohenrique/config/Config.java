@@ -73,8 +73,5 @@ public class Config {
     void initBD() throws Exception {
         List<Movie> movies = CsvUtil.parseCsvFile(resourceFile.getInputStream());
         movieDAO.inserir(movies);
-        MaxBean maxBean = producerService.maiorIntervalo();
-        MinBean minBean = producerService.menorIntervalo();
-
     }
 }

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Producer {
+    //ID
+    private Long idMovie;
     private String nome;
     private List<Win> wins = new ArrayList<>();
 
@@ -57,5 +59,13 @@ public class Producer {
 
             return aux;
         }
+    }
+
+    public Long getIdMovie() {
+        return idMovie;
+    }
+
+    public void setIdMovie(Long idMovie) {
+        this.idMovie = idMovie;
     }
 }
